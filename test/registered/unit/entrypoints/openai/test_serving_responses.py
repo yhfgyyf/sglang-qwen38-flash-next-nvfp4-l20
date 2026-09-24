@@ -291,6 +291,37 @@ class InputMessageConstructionTestCase(CustomTestCase):
         self.assertEqual([m["phase"] for m in messages], ["commentary", "final_answer"])
         self.assertEqual([m["content"] for m in messages], ["working", "answer"])
 
+    def test_unphased_reasoning_and_tool_call_join_their_assistant_turn(self):
+        serving = make_serving()
+        messages = serving._merge_consecutive_assistant_messages(
+            [
+                {"role": "assistant", "reasoning_content": "thinking"},
+                {"role": "assistant", "content": "checking", "phase": "commentary"},
+                {
+                    "role": "assistant",
+                    "tool_calls": [
+                        {
+                            "id": "call_1",
+                            "type": "function",
+                            "function": {"name": "lookup", "arguments": "{}"},
+                        }
+                    ],
+                },
+                {"role": "tool", "tool_call_id": "call_1", "content": "42"},
+                {"role": "assistant", "reasoning_content": "result is 42"},
+                {"role": "assistant", "content": "42", "phase": "final_answer"},
+            ]
+        )
+        self.assertEqual(len(messages), 3)
+        self.assertEqual(messages[0]["phase"], "commentary")
+        self.assertEqual(messages[0]["reasoning_content"], "thinking")
+        self.assertEqual(messages[0]["content"], "checking")
+        self.assertEqual(messages[0]["tool_calls"][0]["id"], "call_1")
+        self.assertEqual(messages[1]["role"], "tool")
+        self.assertEqual(messages[2]["phase"], "final_answer")
+        self.assertEqual(messages[2]["reasoning_content"], "result is 42")
+        self.assertEqual(messages[2]["content"], "42")
+
     def test_input_parts_normalized_for_chat_templates(self):
         serving = make_serving()
         request = ResponsesRequest(

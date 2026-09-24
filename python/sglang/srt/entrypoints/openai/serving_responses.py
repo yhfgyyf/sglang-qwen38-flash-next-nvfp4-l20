@@ -1376,7 +1376,12 @@ class OpenAIServingResponses(OpenAIServingChat):
     ) -> list:
         """Collapse runs of consecutive ``assistant`` dicts into one entry,
         joining ``content`` and concatenating ``tool_calls`` and
-        ``reasoning_content`` so a logical turn renders as a single block."""
+        ``reasoning_content`` so a logical turn renders as a single block.
+
+        Reasoning and tool-call input items have no phase. Attach them to an
+        adjacent assistant message while keeping distinct explicit phases
+        (such as commentary followed by final_answer) separate.
+        """
         merged: list = []
         for msg in messages:
             if (
@@ -1385,9 +1390,15 @@ class OpenAIServingResponses(OpenAIServingChat):
                 and merged
                 and isinstance(merged[-1], dict)
                 and merged[-1].get("role") == "assistant"
-                and merged[-1].get("phase") == msg.get("phase")
+                and (
+                    merged[-1].get("phase") == msg.get("phase")
+                    or merged[-1].get("phase") is None
+                    or msg.get("phase") is None
+                )
             ):
                 prev = merged[-1] = dict(merged[-1])
+                if prev.get("phase") is None and msg.get("phase") is not None:
+                    prev["phase"] = msg["phase"]
                 # Lift mixed str/list content to list parts so non-text parts
                 # (e.g. image_url) survive when the two sides differ in shape.
                 new_content = msg.get("content")
