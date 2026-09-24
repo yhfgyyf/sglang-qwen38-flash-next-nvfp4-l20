@@ -1,3 +1,5 @@
+> 本仓库基于 SGLang v0.5.20，保存双 NVIDIA L20 运行 Qwen3.8 Flash Next NVFP4 时使用的源码补丁。问题分析、验证结果和当前启动命令见 [QWEN38_NVFP4_L20.md](QWEN38_NVFP4_L20.md)。
+
 <div align="center" id="sglangtop">
 <img src="https://raw.githubusercontent.com/sgl-project/sglang/main/assets/logo.png" alt="logo" width="400" margin="10px"></img>
 

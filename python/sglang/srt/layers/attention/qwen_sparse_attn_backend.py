@@ -64,7 +64,7 @@ def _resolve_trtllm_sparse_decode():
 
 @lru_cache(maxsize=1)
 def _resolve_flash_attn_varlen_func():
-    from sglang.srt.utils import is_sm121
+    from sglang.srt.utils import get_device_capability, is_sm121
 
     if is_sm121():
         from sglang.kernels.ops.attention import (
@@ -72,6 +72,13 @@ def _resolve_flash_attn_varlen_func():
         )
 
         return qwen38_qsa_sm121_varlen
+    if get_device_capability() == (8, 9):
+        # QSA's packed decode shapes are supported by the same SGLang kernel
+        # used by the generic fa3 backend on Ada. FA4 CuTe cannot compile
+        # this fallback during target-verify CUDA graph capture on SM89.
+        from sgl_kernel.flash_attn import flash_attn_varlen_func
+
+        return flash_attn_varlen_func
     try:
         from flash_attn import flash_attn_varlen_func
 

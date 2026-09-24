@@ -13,6 +13,7 @@ from sglang.srt.layers.quantization.marlin_utils import (
     should_use_atomic_add_reduce,
 )
 from sglang.srt.layers.quantization.utils import get_scalar_types
+from sglang.srt.layers.utils.common import copy_or_rebind_param
 from sglang.srt.utils import is_cuda
 from sglang.srt.utils.custom_op import register_custom_op
 
@@ -522,7 +523,9 @@ def prepare_moe_nvfp4_layer_for_marlin(layer: torch.nn.Module) -> None:
             tensor_list.append(marlin_permute_bias(bias[i].to(param_dtype)))
         return torch.stack(tensor_list)
 
-    layer.w13_weight = torch.nn.Parameter(
+    copy_or_rebind_param(
+        layer,
+        "w13_weight",
         _repack_moe_fp4_weight_for_marlin(
             w13,
             num_experts=num_experts,
@@ -530,15 +533,17 @@ def prepare_moe_nvfp4_layer_for_marlin(layer: torch.nn.Module) -> None:
             size_k=w13_size_k,
             perm=perm,
         ),
-        requires_grad=False,
     )
-    layer.w2_weight = torch.nn.Parameter(
+    copy_or_rebind_param(
+        layer,
+        "w2_weight",
         _repack_moe_fp4_weight_for_marlin(
             w2, num_experts=num_experts, size_n=w2_size_n, size_k=w2_size_k, perm=perm
         ),
-        requires_grad=False,
     )
-    layer.w13_weight_scale = torch.nn.Parameter(
+    copy_or_rebind_param(
+        layer,
+        "w13_weight_scale",
         _permute_moe_fp4_scales_for_marlin(
             w13_scale.to(param_dtype),
             num_experts=num_experts,
@@ -547,9 +552,10 @@ def prepare_moe_nvfp4_layer_for_marlin(layer: torch.nn.Module) -> None:
             group_size=16,
             process_scales=nvfp4_marlin_process_scales,
         ),
-        requires_grad=False,
     )
-    layer.w2_weight_scale = torch.nn.Parameter(
+    copy_or_rebind_param(
+        layer,
+        "w2_weight_scale",
         _permute_moe_fp4_scales_for_marlin(
             w2_scale.to(param_dtype),
             num_experts=num_experts,
@@ -558,13 +564,12 @@ def prepare_moe_nvfp4_layer_for_marlin(layer: torch.nn.Module) -> None:
             group_size=16,
             process_scales=nvfp4_marlin_process_scales,
         ),
-        requires_grad=False,
     )
-    layer.w13_weight_scale_2 = torch.nn.Parameter(
-        _process_global_scale(w13_global_scale), requires_grad=False
+    copy_or_rebind_param(
+        layer, "w13_weight_scale_2", _process_global_scale(w13_global_scale)
     )
-    layer.w2_weight_scale_2 = torch.nn.Parameter(
-        _process_global_scale(w2_global_scale), requires_grad=False
+    copy_or_rebind_param(
+        layer, "w2_weight_scale_2", _process_global_scale(w2_global_scale)
     )
 
     if w13_bias is not None:
